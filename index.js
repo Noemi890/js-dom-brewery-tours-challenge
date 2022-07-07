@@ -2,9 +2,13 @@ const APIUrl = 'https://api.openbrewerydb.org/breweries'
 const ulList = document.getElementById('breweries-list')
 const form_state = document.getElementById('select-state-form')
 const form_filter = document.getElementById('filter-by-type')
+const filteredCities = []
 
 
-let state = []
+let state = {
+    breweries: [],
+    filter: []
+}
 
 const createElement = (brew) => {
 
@@ -38,12 +42,12 @@ const createElement = (brew) => {
         h2El.innerText = `${brew.name}`
         divEl.innerText = `${brew.brewery_type}`
         h3El.innerText = 'Address:'
-        pEl.innerText = `${brew.street}`
+        pEl.innerText = (brew.street === null) ? '-' : `${brew.street}`
         strongEl.innerText = `${brew.city}, ${brew.postal_code}`
         h3El2.innerText = 'Phone:'
         pEl3.innerText = (brew.phone === null) ? '-' : `${brew.phone}`
         aEl.innerText = 'Visit Website'
-        aEl.href = (brew.website_url === null) ? aEl.innerText = 'Website not provided' : `${brew.website_url}`
+        aEl.href = (brew.website_url === null) ? aEl.innerText = 'No Website' : `${brew.website_url}`
         aEl.target = '_blank'
         // console.log('here as well')
 
@@ -65,11 +69,11 @@ const setEventListenerForStateSearch = () => {
         fetch(`${APIUrl}?by_state=${value}&per_page=50`)
         .then(resp => resp.json())
         .then(resp => {
-            state = resp
+            state.breweries = resp
             console.log(state)
             ulList.innerHTML = ''
             
-            state.forEach(element => {
+            state.breweries.forEach(element => {
                 const micro = element.brewery_type === 'micro'
                 const regional = element.brewery_type === 'regional'
                 const brewpub = element.brewery_type === 'brewpub'
@@ -79,36 +83,20 @@ const setEventListenerForStateSearch = () => {
             })
             form_state.reset()
         })
-
         //Extension 2 part
-
-        const allElements = document.querySelectorAll('#filter-by-city-form > *')
-
-        for (element of allElements) {
-            if (element.name === `${value}`) {
-                return
-            }
-            else {
-                continue
-            }
-        }
-        const citiesForm = document.querySelector('#filter-by-city-form')
-        console.log(citiesForm)
-        const input = document.createElement('input')
-        const label = document.createElement('label')
-
-        input.type = 'checkbox'
-        input.name = `${value}`
-        input.value = `${value}`
-        console.log(input)
-
-        label.htmlFor = `${value}`
-        label.innerText = `${value.substring(0, 1).toUpperCase()}${value.substring(1)}`
-        console.log(label)
-
-        citiesForm.append(input, label)
-    })
-}
+        .then(() => {
+            const citiesForm = document.querySelector('#filter-by-city-form')
+            citiesForm.innerHTML = ''
+            const myCities = []
+            state.breweries.forEach(brewery => {
+                if (!myCities.includes(brewery.city) || myCities.length === 0) {
+                    createCitiesElements(brewery)
+                    myCities.push(brewery.city)
+                }
+            })
+        })
+    }
+)}
 
 const setEventListenerForFilterSearch = () => {
     form_filter.addEventListener('change', () => {
@@ -117,10 +105,10 @@ const setEventListenerForFilterSearch = () => {
         fetch(`${APIUrl}?by_type=${dropdown_value}&per_page=50`)
         .then(resp => resp.json())
         .then( resp => {
-            state = resp
+            state.breweries = resp
             console.log('my value',dropdown_value, 'state', state)
             ulList.innerHTML = ''
-            state.forEach(element => {
+            state.breweries.forEach(element => {
                 const micro = element.brewery_type === 'micro'
                 const regional = element.brewery_type === 'regional'
                 const brewpub = element.brewery_type === 'brewpub'
@@ -148,6 +136,9 @@ const createSearchSection = () => {
     // set values and attributes
     headerEl.setAttribute('class', 'search-bar')
     formEl.autocomplete = 'off'
+    formEl.addEventListener('submit', (event) => {
+        event.preventDefault()
+    })
     formEl.setAttribute('id', 'search-breweries-form')
     labelEl.htmlFor = 'search_breweries'
     h2El.innerText = 'Search breweries:'
@@ -171,9 +162,9 @@ const setEventListenerforSearchSection = () => {
         fetch(`${APIUrl}/search?query=${searchValue}&per_page=50`)
         .then(resp => resp.json())
         .then(resp => {
-            state = resp
+            state.breweries = resp
             ulList.innerHTML = ''
-            state.forEach(element => {
+            state.breweries.forEach(element => {
                 const micro = element.brewery_type === 'micro'
                 const regional = element.brewery_type === 'regional'
                 const brewpub = element.brewery_type === 'brewpub'
@@ -188,7 +179,7 @@ const setEventListenerforSearchSection = () => {
 // Extension 2
 
 const createFilterByCityMenu = () => {
-    const aside = document.querySelector('#filter-by-type-form').parentElement
+    const aside = document.querySelector('#filter-by-type-form').parentNode
 
     //create
     const divEl = document.createElement('div')
@@ -216,6 +207,60 @@ const createFilterByCityMenu = () => {
     aside.append(formEl)
 }
 
+const createCitiesElements = (brew) => {
+    const citiesForm = document.querySelector('#filter-by-city-form')
+
+    const input = document.createElement('input')
+    const label = document.createElement('label')
+
+    input.type = 'checkbox'
+    input.name = `${brew.city}`
+    input.value = `${brew.city}`
+
+    input.addEventListener('change', (event) => {
+        ulList.innerHTML = ''
+        if (event.target.checked === true) {
+            state.filter.push(event.target.name)
+            console.log(state.filter)
+            filterByCity()
+        }
+        else {
+            state.filter.splice(state.filter.indexOf(event.target.name), 1)
+            console.log(state.filter)
+            filterByCity()
+        }
+    })
+
+    label.htmlFor = `${brew.city}`
+    label.innerText = `${brew.city}`
+
+    citiesForm.append(input, label)
+}
+
+const filterByCity = () => {
+    if (state.filter.length === 0) {
+        state.breweries.forEach(element => {
+            const micro = element.brewery_type === 'micro'
+            const regional = element.brewery_type === 'regional'
+            const brewpub = element.brewery_type === 'brewpub'
+            if (micro || regional || brewpub) {
+            createElement(element)
+            }
+        })
+    }
+     else {
+        
+        state.filter.forEach(element=> {
+            const micro = element.brewery_type === 'micro'
+            const regional = element.brewery_type === 'regional'
+            const brewpub = element.brewery_type === 'brewpub'
+        if (micro || regional || brewpub) {
+            createElement(element)
+        }
+        })
+    }
+}
+
 const run = () => {
 setEventListenerForStateSearch()
 setEventListenerForFilterSearch()
@@ -225,3 +270,5 @@ createFilterByCityMenu()
 }
 
 run()
+
+
