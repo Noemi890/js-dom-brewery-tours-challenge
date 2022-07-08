@@ -2,7 +2,7 @@ const APIUrl = 'https://api.openbrewerydb.org/breweries'
 const ulList = document.getElementById('breweries-list')
 const form_state = document.getElementById('select-state-form')
 const form_filter = document.getElementById('filter-by-type')
-const filteredCities = []
+const toShow = ['micro', 'regional', 'brewpub']
 
 
 let state = {
@@ -74,17 +74,17 @@ const setEventListenerForStateSearch = () => {
             ulList.innerHTML = ''
             
             state.breweries.forEach(element => {
-                const micro = element.brewery_type === 'micro'
-                const regional = element.brewery_type === 'regional'
-                const brewpub = element.brewery_type === 'brewpub'
-                if ((micro || regional || brewpub)) {
-                createElement(element)
-                }
+                toShow.forEach(type => {
+                    if ((element.brewery_type === type)) {
+                    createElement(element)
+                    }
+                })
             })
             form_state.reset()
         })
         //Extension 2 part
         .then(() => {
+            state.filter = []
             const citiesForm = document.querySelector('#filter-by-city-form')
             citiesForm.innerHTML = ''
             const myCities = []
@@ -109,12 +109,11 @@ const setEventListenerForFilterSearch = () => {
             console.log('my value',dropdown_value, 'state', state)
             ulList.innerHTML = ''
             state.breweries.forEach(element => {
-                const micro = element.brewery_type === 'micro'
-                const regional = element.brewery_type === 'regional'
-                const brewpub = element.brewery_type === 'brewpub'
-                if ((micro || regional || brewpub)) {
-                createElement(element)
-                }
+                toShow.forEach(type => {
+                    if ((element.brewery_type === type)) {
+                    createElement(element)
+                    }
+                })
             })
         })
     })
@@ -165,12 +164,11 @@ const setEventListenerforSearchSection = () => {
             state.breweries = resp
             ulList.innerHTML = ''
             state.breweries.forEach(element => {
-                const micro = element.brewery_type === 'micro'
-                const regional = element.brewery_type === 'regional'
-                const brewpub = element.brewery_type === 'brewpub'
-                if ((micro || regional || brewpub)) {
-                createElement(element)
-                }
+                toShow.forEach(type => {
+                    if ((element.brewery_type === type)) {
+                    createElement(element)
+                    }
+                })
             })
         })
     })
@@ -219,6 +217,7 @@ const createCitiesElements = (brew) => {
 
     input.addEventListener('change', (event) => {
         ulList.innerHTML = ''
+        console.log('my event', event.target.checked)
         if (event.target.checked === true) {
             state.filter.push(event.target.name)
             console.log(state.filter)
@@ -240,26 +239,33 @@ const createCitiesElements = (brew) => {
 const filterByCity = () => {
     if (state.filter.length === 0) {
         state.breweries.forEach(element => {
-            const micro = element.brewery_type === 'micro'
-            const regional = element.brewery_type === 'regional'
-            const brewpub = element.brewery_type === 'brewpub'
-            if (micro || regional || brewpub) {
-            createElement(element)
-            }
+            toShow.forEach(type => {
+                if ((element.brewery_type === type)) {
+                createElement(element)
+                }
+            })
         })
     }
      else {
-        
-        state.filter.forEach(element=> {
-            const micro = element.brewery_type === 'micro'
-            const regional = element.brewery_type === 'regional'
-            const brewpub = element.brewery_type === 'brewpub'
-        if (micro || regional || brewpub) {
-            createElement(element)
-        }
+        const myBreweries = []
+        state.breweries.forEach(brew => {
+            state.filter.forEach(state => {
+                if (brew.city === state) {
+                    myBreweries.push(brew)
+                }
+            })
+        })
+        console.log(myBreweries)
+        myBreweries.forEach(element=> {
+                toShow.forEach(type => {
+                    if ((element.brewery_type === type)) {
+                        createElement(element)
+                    }
+                })
         })
     }
 }
+
 
 const run = () => {
 setEventListenerForStateSearch()
